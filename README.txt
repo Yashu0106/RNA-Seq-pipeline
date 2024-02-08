@@ -1,4 +1,4 @@
-
+# RNA-Seq bioinformatics pipeline.
 
 # RNA-Seq general bioinformatics pipeline involved following (Song, et al. 2021) : 
 # 1) RNA-Seq raw data quality control (data trimming). This step is to remove adaptors (arbitrarily unnecessary as some may agree)and low-quality reads. 
