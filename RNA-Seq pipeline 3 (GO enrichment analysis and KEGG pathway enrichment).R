@@ -11,6 +11,7 @@ library(readxl)
 library(xlsx)
 
 setwd("/Users/dir_where_you_want_it_to_be/")
+#We use Ensembl database.
 #Fetch your DEGs' GO annotations via Ensembl Biomart first, generate annotated file as GO.csv.
 #Again, EL31L is name of my sample.
 
@@ -114,7 +115,7 @@ write.csv(EL31L.down.enriched,file="dir_where_you_want_it_to_be/EL31L.down.enric
 #In excel, input DEGs number column
 #Input background gene column 
 #Input number of DEGs column (same number all way
-#Input Reference list gene number column (same number 30661 all way)
+#Input Reference list gene number column (same number 30661 all way. 30661 is the total number of gene in Vitis Vinifera. Your number may be different depending on your target of interest)
 #conduct fisher exact test in next column, using the four column build above
 #Rank the p-values in excel
 #Then do FDR adjust. 
@@ -202,7 +203,7 @@ EL31L.up.mydata.kegg.wide <- EL31L.up.mydata.kegg %>%
 colnames(EL31L.up.mydata.kegg.wide)<- c("KEGG pathway","Ensembl Gene ID mydata")
 tail(EL31L.up.mydata.kegg.wide)
 write.xlsx(EL31L.up.mydata.kegg.wide,file="KEGG pathway enrichment/EL31L.up.mydata.kegg.wide.xlsx") 
-##DOWN##
+##Down-regulated##
 EL31L.down.mydata.kegg.wide <- EL31L.down.mydata.kegg %>%
   group_by(KEGG.Pathway.and.Enzyme.ID) %>%
   summarise(text=str_c(Gene.stable.ID,collapse=","))
@@ -262,7 +263,7 @@ head(EL31L.up.enriched.kegg)
 head(EL31L.down.enriched.kegg)
 nrow(EL31L.up.enriched.kegg)
 nrow(EL31L.down.enriched.kegg)
-#Count the number of comma separated gene IDs of both mydata_input and backgroun_input in a single cell, then add these number of counts into another column
+#Count the number of comma separated gene IDs of both mydata_input and background_input in a single cell, then add these number of counts into another column
 #this is your numbers used to calculate fisher test. 
 EL31L.up.enriched.kegg$EL31L.up.mydata_input<-count.fields(textConnection(EL31L.up.enriched.kegg$`Ensembl Gene ID mydata`),sep = ",")
 EL31L.up.enriched.kegg$EL31L.up.background_input<-count.fields(textConnection(EL31L.up.enriched.kegg$`Ensembl Gene ID background`),sep = ",")
@@ -283,12 +284,12 @@ write.xlsx(EL31L.down.enriched.kegg,file="KEGG pathway enrichment/EL31L.down.enr
 #number of gene ID supposed to attached to this GO ID in vitis vinifera reference gene 
 
 #In excel, input DEGs number column
-#input backgroun gene column 
-#input number of DEGs column (same number all way
-#input Reference list gene number clumn (same number 30661 all way)
+#Input background gene column 
+#Input number of DEGs column (same number all way
+#Input Reference list gene number column (same number 30661 all way. 30661 is the total number of gene in Vitis Vinifera. Your number may be different depending on your target of interest)
 #conduct fisher exact test in next column, using the four column build above
-#!!!rank the p-values in excel
-#then do FDR adjust. 
+#Rank the p-values in excel
+#Then do FDR adjust. 
 #extract the GOs with FDR <0.05 (FDR =pvalue*total rank numbers/rank nubmer of this sample)
 
 #extract data and subset only FDR <0.05 ones (i.e., the enriched KEGG pathways)
