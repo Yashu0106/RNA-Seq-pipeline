@@ -1,0 +1,159 @@
+# RNA-Seq pipeline used my Vitis Vinifera study as an example. 
+# Sample raw data is FASTA file under name EL3115L. 
+# If RNA-Seq platform provided single-ended sequencing, you will get 1 FASTA file per sample; if the platform provided paired-ended sequencing, you will get 2 FASTA file per sample. My sample raw data is paired-ended, so I will have 2 FASTA file with the same sample name.
+
+
+# Ensembl reference preparation: 
+# Download all Vitis Vinifera ref files from ensemble: https://plants.ensembl.org/Vitis_vinifera/Info/Index#:~:text=About%20Vitis%20vinifera,genome%20size%20of%20~500%20Mb.
+
+
+# Tools download preparation for SHARCNET (cutadapt, Trimgalore, FASTQC, Samtool, STAR, HTSeq), 
+# Cutadapt
+module load python 
+pip install cutadapt
+cutadapt --help
+
+
+# Trimgalore: download and unzip Trimgalore 0.6/10 in your directory.
+# Stay in login node
+chmod 777 TrimGalore-0.6.10/
+nano .bashrc 
+
+PATH=/home/lfletch/TrimGalore-0.6.10:$PATH
+# ctrl+x, y, enter 
+source .bashrc 
+trim_galore --help
+
+
+# FastQC
+module load nixpkgs/16.09
+module load fastqc
+fastqc --help
+
+
+# Samtool 
+module load StdEnv/2020
+module load samtools/1.17
+samtools --help
+
+
+# STAR
+module load nixpkgs/16.09 
+module load gcc/7.3.0
+module load nixpkgs/16.09
+module load intel/2018.3
+module load star/2.7.3a
+STAR --help
+
+# HTSeq
+module load python  
+pip install HTseq
+htseq-count --help
+ 
+
+
+# Once everything is downloaded and prepared on SHARCNET, you need to run below code over EVERY-TIME when you login to SHARCNET because 'module load' is temporary:
+
+module load python  
+cutadapt --help
+trim_galore --help
+module load nixpkgs/16.09
+module load fastqc
+fastqc --help
+module load nixpkgs/16.09 
+module load gcc/7.3.0
+module load nixpkgs/16.09
+module load intel/2018.3
+module load star/2.7.3a
+STAR --help
+htseq-count --help
+
+module load StdEnv/2020
+module load samtools/1.17
+samtools --help
+
+
+
+
+# Move raw RNA-Seq sample data and build dir: 
+cd raw_data/your_Directory/
+cp -r EL3115L/ raw_data/your_directory/
+cd /your_Directory/ 
+mkdir trim_galore
+cd /your_Directory/
+
+
+# Trimgalore
+# Submit a batch trim galore job in main directory, and tell it to output results file in trim_galore/you_Directory.
+nano trim_EL3115L.sh 
+#!/bin/bash 
+#SBATCH --time=5:00:00 
+#SBATCH --mem=5120
+#SBATCH --job-name=trim_EL3115L
+#SBATCH --mincpus=4
+srun trim_galore -o trim_galore --paired --illumina raw_data/EL3115L/EL3115L_1.fq raw_data/EL3115L/EL3115L_2.fq
+# ctrl+x, y, enter 
+sbatch trim_EL3115L.sh 
+squeue --jobs your_job_number
+
+
+# FastQC 
+# Submit a batch FastQC job in main directory, and tell it to output results file in fastqc/you_Directory
+mkdir fastqc
+nano fastqc_EL3115L.sh 
+#!/bin/bash 
+#SBATCH --time=1:00:00 
+#SBATCH --mem=5120 
+#SBATCH --job-name=fastqc_EL3115L
+#SBATCH --mincpus=4
+srun fastqc -noextract -o fastqc trim_galore/EL3115L_trimmed.fq
+# ctrl+x, y, enter 
+sbatch fastqc_EL3115L.sh
+squeue --jobs your_job_number
+
+
+# Make STAR directory
+mkdir star_ensembl
+
+# Indexing STAR using Ensembl Vitis_vinifera.12X.dna.toplevel.fa and Ensembl Vitis_vinifera.12X.51.gtf file
+nano star_index.sh 
+#!/bin/bash
+#SBATCH --time=5:00:00
+#SBATCH --mem=32000
+#SBATCH --job-name=star_index
+#SBATCH --mincpus=4
+srun STAR --runMode genomeGenerate --genomeDir star_ensembl --genomeFastaFiles Ensembl_ref/Vitis_vinifera.12X.dna.toplevel.fa --sjdbGTFfile Ensembl_ref/Vitis_vinifera.12X.51.gtf --sjdbOverhang 149
+# ctrl+x, y, enter 
+sbatch star_index.sh
+squeue --jobs your_job_number
+
+
+# STAR alignment 
+nano star_EL3115L.sh
+#!/bin/bash
+#SBATCH --time=8:00:00
+#SBATCH --mem=50000
+#SBATCH --job-name=star_EL3115L
+#SBATCH --mincpus=4
+srun STAR -- runMode alignReads --genomeDir star_ensembl --readFilesCommand zcat --readFilesIn trim_galore/EL3115L_val_1.fq.gz trim_galore/EL3115L_val_2.fq.gz --outFileNamePrefix star_ensembl/EL3115L --outSAMtype BAM Unsorted SortedByCoordinate
+# ctrl+x, y, enter 
+sbatch star_EL3115L.sh
+squeue --jobs your_job_number
+
+
+# HTSeq
+mkdir htseq_ensembl
+nano htseq_3EL3115L.sh 
+#!/bin/bash
+#SBATCH --time=3:00:00
+#SBATCH --mem=32000
+#SBATCH --job-name=htseq_EL3115L
+#SBATCH --mincpus=4
+python3.6 htseq-count --format=bam --stranded=no --order=pos --samout=/htseq_ensembl/EL3115L_out.sam /star_ensembl/EL3115LAligned.sortedByCoord.out.bam /Ensembl_ref/Vitis_vinifera.12X.51.gtf >/htseq_ensembl/EL3115L_htseqcount.txt 
+# ctrl+x, y, enter 
+sbatch htseq_3EL3115L.sh
+squeue --jobs your_job_number
+
+
+#DESeq2 normalization analysis in R, see next R file.
+
